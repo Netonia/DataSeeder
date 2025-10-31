@@ -1,0 +1,431 @@
+﻿@page "/"
+@using DataSeeder.Models
+@using DataSeeder.Services
+@inject RandomDataService RandomDataService
+@inject TemplateService TemplateService
+@inject StorageService StorageService
+@inject ExportService ExportService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>DataSeeder</PageTitle>
+
+<div class="container-fluid p-0">
+    <div class="row g-0">
+        <!-- Left Panel: Model Management -->
+        <div class="col-md-2 border-end bg-light vh-100 overflow-auto">
+            <div class="p-3">
+                <h4 class="mb-3">Data Models</h4>
+                
+                <!-- Model Selection -->
+                <div class="mb-3">
+                    <select class="form-select" @onchange="OnModelSelected">
+                        <option value="">-- Select a model --</option>
+                        @foreach (var model in _models)
+                        {
+                            <option value="@model.Id" selected="@(model.Id == _currentModel?.Id)">@model.Name</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="d-grid gap-2 mb-3">
+                    <button class="btn btn-primary" @onclick="CreateNewModel">
+                        <i class="bi bi-plus-circle"></i> New Model
+                    </button>
+                    @if (_currentModel != null)
+                    {
+                        <button class="btn btn-danger" @onclick="DeleteCurrentModel">
+                            <i class="bi bi-trash"></i> Delete Model
+                        </button>
+                    }
+                </div>
+                
+                @if (_currentModel != null)
+                {
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <strong>Model Details</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Model Name</label>
+                                <input type="text" class="form-control" @bind="_currentModel.Name" @bind:event="oninput" />
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Row Count</label>
+                                <input type="number" class="form-control" @bind="_currentModel.RowCount" min="1" max="1000" />
+                            </div>
+                            
+                            <button class="btn btn-success w-100" @onclick="SaveCurrentModel">
+                                <i class="bi bi-save"></i> Save Model
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <strong>Fields</strong>
+                            <button class="btn btn-sm btn-primary" @onclick="AddField">
+                                <i class="bi bi-plus"></i> Add Field
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            @if (_currentModel.Fields.Count == 0)
+                            {
+                                <p class="text-muted">No fields defined yet.</p>
+                            }
+                            else
+                            {
+                                @foreach (var field in _currentModel.Fields)
+                                {
+                                    <div class="card mb-2">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <input type="text" class="form-control form-control-sm me-2" 
+                                                       placeholder="Field name" 
+                                                       @bind="field.Name" @bind:event="oninput" />
+                                                <button class="btn btn-sm btn-danger" @onclick="() => RemoveField(field)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                            <select class="form-select form-select-sm" @bind="field.Type">
+                                                @foreach (FieldType type in Enum.GetValues(typeof(FieldType)))
+                                                {
+                                                    <option value="@type">@type</option>
+                                                }
+                                            </select>
+                                            
+                                            @if (field.Type == FieldType.String)
+                                            {
+                                                <div class="row mt-2">
+                                                    <div class="col">
+                                                        <input type="number" class="form-control form-control-sm" 
+                                                               placeholder="Min Length" 
+                                                               @bind="field.MinLength" />
+                                                    </div>
+                                                    <div class="col">
+                                                        <input type="number" class="form-control form-control-sm" 
+                                                               placeholder="Max Length" 
+                                                               @bind="field.MaxLength" />
+                                                    </div>
+                                                </div>
+                                            }
+                                            
+                                            @if (field.Type == FieldType.Integer || field.Type == FieldType.Decimal)
+                                            {
+                                                <div class="row mt-2">
+                                                    <div class="col">
+                                                        <input type="number" class="form-control form-control-sm" 
+                                                               placeholder="Min Value" 
+                                                               @bind="field.MinValue" />
+                                                    </div>
+                                                    <div class="col">
+                                                        <input type="number" class="form-control form-control-sm" 
+                                                               placeholder="Max Value" 
+                                                               @bind="field.MaxValue" />
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <!-- Right Panel: Template Editor & Preview -->
+        <div class="col-md-10 vh-100 overflow-auto">
+            <div class="p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4>Data Generation</h4>
+                    @if (_currentModel != null)
+                    {
+                        <div class="btn-group">
+                            <button class="btn btn-primary" @onclick="GenerateData" disabled="@_isGenerating">
+                                @if (_isGenerating)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="bi bi-play-fill"></i> Generate
+                            </button>
+                            <button class="btn btn-secondary" @onclick="CopyToClipboard" disabled="@(_generatedData.Count == 0)">
+                                <i class="bi bi-clipboard"></i> Copy
+                            </button>
+                            <button class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown" disabled="@(_generatedData.Count == 0)">
+                                <i class="bi bi-download"></i> Export
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" @onclick="() => ExportData(ExportFormat.CSV)">CSV</a></li>
+                                <li><a class="dropdown-item" @onclick="() => ExportData(ExportFormat.JSON)">JSON</a></li>
+                                <li><a class="dropdown-item" @onclick="() => ExportData(ExportFormat.SQL)">SQL</a></li>
+                            </ul>
+                        </div>
+                    }
+                </div>
+                
+                @if (_currentModel != null)
+                {
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <strong>Liquid Template</strong>
+                            <small class="text-muted ms-2">Use {% raw %}{{ fieldName }}{% endraw %} to insert field values</small>
+                        </div>
+                        <div class="card-body">
+                            <textarea class="form-control font-monospace" 
+                                      rows="5" 
+                                      @bind="_currentModel.Template" 
+                                      @bind:event="oninput"
+                                      placeholder="Example: {{ FirstName }} {{ LastName }} - {{ Email }}"></textarea>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Tip: Use {% raw %}{% for item in items %}...{% endfor %}{% endraw %} to loop through all rows
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <strong>Preview</strong>
+                            <span class="badge bg-primary ms-2">@_generatedData.Count rows</span>
+                        </div>
+                        <div class="card-body">
+                            @if (_isGenerating)
+                            {
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Generating data...</p>
+                                </div>
+                            }
+                            else if (_generatedData.Count == 0)
+                            {
+                                <p class="text-muted">Click "Generate" to see preview</p>
+                            }
+                            else
+                            {
+                                @if (!string.IsNullOrWhiteSpace(_renderedOutput))
+                                {
+                                    <pre class="border rounded p-3 bg-light" style="max-height: 500px; overflow-y: auto;">@_renderedOutput</pre>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                        <table class="table table-sm table-striped">
+                                            <thead>
+                                                <tr>
+                                                    @foreach (var key in _generatedData[0].Keys)
+                                                    {
+                                                        <th>@key</th>
+                                                    }
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var row in _generatedData.Take(100))
+                                                {
+                                                    <tr>
+                                                        @foreach (var key in row.Keys)
+                                                        {
+                                                            <td>@row[key]</td>
+                                                        }
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                        @if (_generatedData.Count > 100)
+                                        {
+                                            <p class="text-muted text-center mt-2">Showing first 100 of @_generatedData.Count rows</p>
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <h5>Welcome to DataSeeder!</h5>
+                        <p>Create or select a model to get started generating test data.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<DataModel> _models = new();
+    private DataModel? _currentModel;
+    private List<Dictionary<string, object>> _generatedData = new();
+    private string _renderedOutput = string.Empty;
+    private bool _isGenerating = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadModels();
+        
+        // Load last used model
+        var lastModelId = await StorageService.GetLastModelIdAsync();
+        if (lastModelId != null)
+        {
+            _currentModel = _models.FirstOrDefault(m => m.Id == lastModelId);
+        }
+    }
+    
+    private async Task LoadModels()
+    {
+        _models = await StorageService.GetAllModelsAsync();
+    }
+    
+    private void CreateNewModel()
+    {
+        _currentModel = new DataModel
+        {
+            Name = "New Model",
+            RowCount = 10,
+            Template = "{% for item in items %}\n{{ item }}\n{% endfor %}"
+        };
+        _generatedData.Clear();
+        _renderedOutput = string.Empty;
+    }
+    
+    private async Task SaveCurrentModel()
+    {
+        if (_currentModel != null)
+        {
+            await StorageService.SaveModelAsync(_currentModel);
+            await LoadModels();
+        }
+    }
+    
+    private async Task DeleteCurrentModel()
+    {
+        if (_currentModel != null)
+        {
+            await StorageService.DeleteModelAsync(_currentModel.Id);
+            await LoadModels();
+            _currentModel = null;
+            _generatedData.Clear();
+            _renderedOutput = string.Empty;
+        }
+    }
+    
+    private async Task OnModelSelected(ChangeEventArgs e)
+    {
+        var modelId = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(modelId))
+        {
+            _currentModel = _models.FirstOrDefault(m => m.Id == modelId);
+            _generatedData.Clear();
+            _renderedOutput = string.Empty;
+            
+            if (_currentModel != null)
+            {
+                await StorageService.SaveModelAsync(_currentModel); // Update last used
+            }
+        }
+    }
+    
+    private void AddField()
+    {
+        if (_currentModel != null)
+        {
+            _currentModel.Fields.Add(new FieldDefinition
+            {
+                Name = $"Field{_currentModel.Fields.Count + 1}",
+                Type = FieldType.String
+            });
+        }
+    }
+    
+    private void RemoveField(FieldDefinition field)
+    {
+        _currentModel?.Fields.Remove(field);
+    }
+    
+    private async Task GenerateData()
+    {
+        if (_currentModel == null || _currentModel.Fields.Count == 0) return;
+        
+        _isGenerating = true;
+        StateHasChanged();
+        
+        await Task.Delay(100); // Let UI update
+        
+        try
+        {
+            _generatedData = RandomDataService.GenerateData(_currentModel.Fields, _currentModel.RowCount);
+            
+            if (!string.IsNullOrWhiteSpace(_currentModel.Template))
+            {
+                _renderedOutput = await TemplateService.RenderTemplateAsync(_currentModel.Template, _generatedData);
+            }
+            else
+            {
+                _renderedOutput = string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            _renderedOutput = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isGenerating = false;
+        }
+    }
+    
+    private async Task CopyToClipboard()
+    {
+        if (_generatedData.Count == 0) return;
+        
+        string content;
+        if (!string.IsNullOrWhiteSpace(_renderedOutput))
+        {
+            content = _renderedOutput;
+        }
+        else
+        {
+            content = ExportService.ExportToCsv(_generatedData);
+        }
+        
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", content);
+    }
+    
+    private async Task ExportData(ExportFormat format)
+    {
+        if (_generatedData.Count == 0) return;
+        
+        string content;
+        string filename;
+        string mimeType;
+        
+        switch (format)
+        {
+            case ExportFormat.CSV:
+                content = ExportService.ExportToCsv(_generatedData);
+                filename = $"{_currentModel?.Name ?? "data"}.csv";
+                mimeType = "text/csv";
+                break;
+            case ExportFormat.JSON:
+                content = ExportService.ExportToJson(_generatedData);
+                filename = $"{_currentModel?.Name ?? "data"}.json";
+                mimeType = "application/json";
+                break;
+            case ExportFormat.SQL:
+                content = ExportService.ExportToSql(_generatedData, _currentModel?.Name ?? "GeneratedData");
+                filename = $"{_currentModel?.Name ?? "data"}.sql";
+                mimeType = "text/plain";
+                break;
+            default:
+                return;
+        }
+        
+        await JSRuntime.InvokeVoidAsync("downloadFile", filename, mimeType, content);
+    }
+}

@@ -14,7 +14,7 @@
         <!-- Left Panel: Model Management -->
         <div class="col-md-2 border-end bg-light vh-100 overflow-auto">
             <div class="p-3">
-                <h4 class="mb-3">Data Models</h4>
+                <h4 class="mb-3">Models</h4>
                 
                 <!-- Model Selection -->
                 <div class="mb-3">
@@ -140,7 +140,7 @@
         <div class="col-md-10 vh-100 overflow-auto">
             <div class="p-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4>Data Generation</h4>
+                    <h4>Generation</h4>
                     @if (_currentModel != null)
                     {
                         <div class="btn-group">
@@ -170,8 +170,7 @@
                 {
                     <div class="card mb-3">
                         <div class="card-header">
-                            <strong>Liquid Template</strong>
-                            <small class="text-muted ms-2">Use {% raw %}{{ fieldName }}{% endraw %} to insert field values</small>
+                            <strong>Template</strong>
                         </div>
                         <div class="card-body">
                             <textarea class="form-control font-monospace" 
@@ -179,11 +178,6 @@
                                       @bind="_currentModel.Template" 
                                       @bind:event="oninput"
                                       placeholder="Example: {{ FirstName }} {{ LastName }} - {{ Email }}"></textarea>
-                            <div class="mt-2">
-                                <small class="text-muted">
-                                    Tip: Use {% raw %}{% for item in items %}...{% endfor %}{% endraw %} to loop through all rows
-                                </small>
-                            </div>
                         </div>
                     </div>
                     

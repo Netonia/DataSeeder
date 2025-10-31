@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "DataSeeder",
   "resources": {
-    "hash": "sha256-hHo3gNR2590h3Fxk0kQeaG5VIDKwcvKoq0MDRb8vjF0=",
+    "hash": "sha256-UqHRwerURX2Nb9Vl4XiMh3KqakCYBUlJGvJ5kbgC99w=",
     "fingerprinting": {
       "Blazored.LocalStorage.12n6dz54qr.wasm": "Blazored.LocalStorage.wasm",
       "Bogus.yn7e1oy79k.wasm": "Bogus.wasm",
@@ -61,7 +61,7 @@
       "System.Threading.l076ub7jlh.wasm": "System.Threading.wasm",
       "System.8rv0tdtrxz.wasm": "System.wasm",
       "System.Private.CoreLib.8g7d792sbx.wasm": "System.Private.CoreLib.wasm",
-      "DataSeeder.r6sxxm461k.wasm": "DataSeeder.wasm",
+      "DataSeeder.e61x68cbz7.wasm": "DataSeeder.wasm",
       "dotnet.js": "dotnet.js",
       "dotnet.native.l4ptthxatg.js": "dotnet.native.js",
       "dotnet.native.d2w7colv7e.wasm": "dotnet.native.wasm",
@@ -145,7 +145,7 @@
       "System.Text.RegularExpressions.doyjpcnpin.wasm": "sha256-TU+rJb/DbRgnOt2gkOcaztGPbSJR24NM9PsGySGXEgQ=",
       "System.Threading.l076ub7jlh.wasm": "sha256-BYM74VCZoN8Ij59a4Qvg1Q891gvsEmqvMmPnLvmqiwo=",
       "System.8rv0tdtrxz.wasm": "sha256-xMF0eauQ5DkSzUozHLFFMQnL6DSJO09nJLtgag+Dzbw=",
-      "DataSeeder.r6sxxm461k.wasm": "sha256-DVpt8sF4HwSN2HZFo/4i/gCmPM62/7hCi17ElQ/RIx8="
+      "DataSeeder.e61x68cbz7.wasm": "sha256-yhUJbB9dWfv78uxOlYlWtiuYBFPKLvPwXTGXqbY6G7c="
     }
   },
   "cacheBootResources": true,
